@@ -4,6 +4,9 @@ extern crate alloc;
 use stylus_sdk::alloy_primitives::{Address, U256};
 use stylus_sdk::prelude::*;
 
+mod adapter;
+use adapter::{AggregatorAdapter, ConcreteAdapter};
+
 pub trait LendingAggregatorParams {
     const PROTOCOL_FEE_PERCENT: U256;
 }
@@ -11,14 +14,6 @@ pub trait LendingAggregatorParams {
 pub struct DefaultParams;
 impl LendingAggregatorParams for DefaultParams {
     const PROTOCOL_FEE_PERCENT: U256 = U256::from_limbs([20, 0, 0, 0]);
-}
-
-pub trait AggregatorAdapter {
-    fn get_rates(&self, asset: Address) -> (U256, U256);
-    fn supply(&mut self, asset: Address, amount: U256, user: Address);
-    fn withdraw(&mut self, asset: Address, amount: U256, user: Address);
-    fn borrow(&mut self, asset: Address, amount: U256, user: Address);
-    fn get_protocol_address(&self) -> Address;
 }
 
 sol_storage! {
@@ -89,6 +84,7 @@ impl LendingAggregator {
 
         for i in 0..self.adapter_count.get().as_limbs()[0] {
             let adapter_address = self.adapter_addresses.get(U256::from(i));
+            // Call the internal helper to get a concrete adapter instance.
             let adapter = Self::get_adapter_instance_private(self, adapter_address);
             let (deposit_rate, _) = adapter.get_rates(asset);
             if deposit_rate > best_rate {
@@ -122,28 +118,5 @@ impl LendingAggregator {
         let adapter_index = self.adapters.get(adapter_address);
         let protocol_address = self.adapter_addresses.get(adapter_index);
         ConcreteAdapter::new(protocol_address)
-    }
-}
-
-#[derive(Clone)]
-struct ConcreteAdapter {
-    protocol_address: Address,
-}
-
-impl ConcreteAdapter {
-    fn new(protocol_address: Address) -> Self {
-        Self { protocol_address }
-    }
-}
-
-impl AggregatorAdapter for ConcreteAdapter {
-    fn get_rates(&self, _asset: Address) -> (U256, U256) {
-        (U256::from(100), U256::from(200))
-    }
-    fn supply(&mut self, _asset: Address, _amount: U256, _user: Address) {}
-    fn withdraw(&mut self, _asset: Address, _amount: U256, _user: Address) {}
-    fn borrow(&mut self, _asset: Address, _amount: U256, _user: Address) {}
-    fn get_protocol_address(&self) -> Address {
-        self.protocol_address
     }
 }
