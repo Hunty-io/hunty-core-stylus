@@ -8,7 +8,9 @@ repository = "https://github.com/OffchainLabs/stylus-hello-world"
 keywords = ["arbitrum", "ethereum", "stylus", "alloy"]
 description = "Stylus hello world example"
 
+
 [dependencies]
+openzeppelin-stylus = "0.1.1"
 alloy-primitives = "=0.8.20"
 alloy-sol-types = "=0.8.20"
 mini-alloc = "0.4.2"
