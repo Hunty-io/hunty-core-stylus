@@ -4,6 +4,15 @@ extern crate alloc;
 use stylus_sdk::alloy_primitives::{Address, U256};
 use stylus_sdk::prelude::*;
 
+pub trait LendingAggregatorParams {
+    const PROTOCOL_FEE_PERCENT: U256;
+}
+
+pub struct DefaultParams;
+impl LendingAggregatorParams for DefaultParams {
+    const PROTOCOL_FEE_PERCENT: U256 = U256::from_limbs([20, 0, 0, 0]);
+}
+
 sol_storage! {
     #[entrypoint]
     pub struct LendingAggregator {
@@ -11,13 +20,17 @@ sol_storage! {
         uint256 adapter_count;
         mapping(address => uint256) adapters;
         mapping(uint256 => string) adapters_name;
+
     }
 }
 
-static PROTOCOL_FEE_PERCENT: U256 = U256::ZERO.saturating_add(U256::from_limbs([20, 0, 0, 0]));
-
 #[public]
 impl LendingAggregator {
+    pub fn init(&mut self, treasury: Address) {
+        self.treasury.set(treasury);
+        self.adapter_count.set(U256::ZERO);
+    }
+
     pub fn treasury(&self) -> Address {
         self.treasury.get()
     }
@@ -53,11 +66,11 @@ impl LendingAggregator {
     }
 
     pub fn get_protocol_fee_percent(&self) -> U256 {
-        PROTOCOL_FEE_PERCENT
+        DefaultParams::PROTOCOL_FEE_PERCENT
     }
 
-    fn calculate_fee(amount: U256) -> (U256, U256) {
-        let fee = (amount * PROTOCOL_FEE_PERCENT) / U256::from(10000);
+    pub fn calculate_fee(amount: U256) -> (U256, U256) {
+        let fee = (amount * DefaultParams::PROTOCOL_FEE_PERCENT) / U256::from(10000);
         let net_amount = amount - fee;
         (fee, net_amount)
     }
